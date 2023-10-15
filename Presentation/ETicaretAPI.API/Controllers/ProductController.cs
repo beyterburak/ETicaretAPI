@@ -1,7 +1,9 @@
 ﻿using ETicaretAPI.Application.Repositories;
+using ETicaretAPI.Application.ViewModels.Products;
 using ETicaretAPI.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace ETicaretAPI.API.Controllers
 {
@@ -11,27 +13,56 @@ namespace ETicaretAPI.API.Controllers
     {
         private readonly IProductWriteRepository _productWriteRepository;
         private readonly IProductReadRepository _productReadRepository;
-        private readonly IOrderReadRepository _orderReadRepository;
-        private readonly IOrderWriteRepository _orderWriteRepository;
-        private readonly ICustomerReadRepository _customerReadRepository;
-        private readonly ICustomerWriteRepository _customerWriteRepository;
 
-        public ProductController(IProductWriteRepository productWriteRepository, IProductReadRepository productReadRepository, IOrderReadRepository orderReadRepository, IOrderWriteRepository orderWriteRepository, ICustomerReadRepository customerReadRepository, ICustomerWriteRepository customerWriteRepository)
+        public ProductController(IProductWriteRepository productWriteRepository, IProductReadRepository productReadRepository)
         {
             _productWriteRepository = productWriteRepository;
             _productReadRepository = productReadRepository;
-            _orderReadRepository = orderReadRepository;
-            _orderWriteRepository = orderWriteRepository;
-            _customerReadRepository = customerReadRepository;
-            _customerWriteRepository = customerWriteRepository;
         }
 
+        //Get metotları içerisinde veri üzerinde herhangi bir değişiklik yapılmadan doğrudan getirilip kullanıcıya sunulacağı için tracking mekanizmasına ihtiyacımız yoktur. Bu yüzden tracking mekanizmasını 'false' diyerek kapatıp işlem yapmamız daha performanslı olacaktır.
         [HttpGet]
-        public async Task Get()
+        public async Task<IActionResult> Get()
         {
-            Product product = await _productReadRepository.GetByIdAsync("13ee8eff-5307-4cf7-b2cd-e76ca4b1ac5b");
-            product.Stock = 2;
+            return Ok(_productReadRepository.GetAll(false));
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> Get(string id)
+        {
+            return Ok(await _productReadRepository.GetByIdAsync(id, false));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Post(VM_Create_Product model)
+        {
+            await _productWriteRepository.AddAsync(new()
+            {
+                Name = model.Name,
+                Price = model.Price,
+                Stock = model.Stock,
+            });
             await _productWriteRepository.SaveAsync();
+            return StatusCode((int)HttpStatusCode.Created);
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> Put(VM_Update_Product model)
+        {
+            Product product = await _productReadRepository.GetByIdAsync(model.Id);
+            product.Stock = model.Stock;
+            product.Name = model.Name;
+            product.Price = model.Price;
+            await _productWriteRepository.SaveAsync();
+            return Ok();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(string id)
+        {
+            await _productWriteRepository.RemoveAsync(id);
+            await _productWriteRepository.SaveAsync();
+            return Ok();
         }
     }
 }
