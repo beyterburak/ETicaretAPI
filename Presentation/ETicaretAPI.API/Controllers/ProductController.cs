@@ -1,4 +1,5 @@
 ﻿using ETicaretAPI.Application.Repositories;
+using ETicaretAPI.Application.RequestParameters;
 using ETicaretAPI.Application.ViewModels.Products;
 using ETicaretAPI.Domain.Entities;
 using Microsoft.AspNetCore.Http;
@@ -22,9 +23,26 @@ namespace ETicaretAPI.API.Controllers
 
         //Get metotları içerisinde veri üzerinde herhangi bir değişiklik yapılmadan doğrudan getirilip kullanıcıya sunulacağı için tracking mekanizmasına ihtiyacımız yoktur. Bu yüzden tracking mekanizmasını 'false' diyerek kapatıp işlem yapmamız daha performanslı olacaktır.
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> Get([FromQuery]Pagination pagination)
         {
-            return Ok(_productReadRepository.GetAll(false));
+            await Task.Delay(500);
+            var totalCount = _productReadRepository.GetAll(false).Count();
+            var products = _productReadRepository.GetAll(false).Skip(pagination.Page * pagination.Size).Take(pagination.Size).Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Stock,
+                p.Price,
+                p.CreatedDate,
+                p.UpdatedDate
+            }).ToList();
+
+            return Ok(new
+            {
+                totalCount,
+                products
+            });
+            
         }
 
         [HttpGet("{id}")]
